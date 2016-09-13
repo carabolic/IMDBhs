@@ -21,7 +21,7 @@ data Suspended = Suspended
                deriving (Show)
 data MovieType = Cinema | Video | Television | VideoGame
                deriving (Show)
-data Movie = Movie T.Text (Maybe Year) (Maybe Int) (Maybe Suspended) MovieType (Maybe Year)
+data Movie = Movie TitleId (Maybe Suspended) MovieType (Maybe Year)
            deriving (Show)
 
 data RunningYears = Finished Year Year | Running Year | Announced
@@ -32,15 +32,15 @@ data EpisodeTitle = WithTitle T.Text (Maybe (Int, Int))
                   | WithoutTitleAndNumbers Year Month Day
                   deriving (Show, Eq)
 
-data SeriesId = SeriesId T.Text (Maybe Year) (Maybe Int)
+data TitleId = TitleId T.Text (Maybe Year) (Maybe Int)
               deriving (Show, Eq)
 
 -- {title, season, episode, year_aired}
-data Episode = Episode SeriesId EpisodeTitle (Maybe Year)
+data Episode = Episode TitleId EpisodeTitle (Maybe Year)
              deriving (Show, Eq)
 
 -- {title, running_years, [season]}
-data Series = Series SeriesId RunningYears
+data Series = Series TitleId RunningYears
             deriving (Show, Eq)
 
 -- Temporal stuff
@@ -147,13 +147,13 @@ episode = do
   skipTailingWhitespace
   return $ Episode sid episodeTitle yearAired
 
-seriesId :: Parser SeriesId
+seriesId :: Parser TitleId
 seriesId = do
   char '"'
   t <- manyTill anyChar (string "\" (")
   (y, n) <- yearId
   char ')'
-  return $ SeriesId (T.pack t) y n
+  return $ TitleId (T.pack t) y n
 
 series :: Parser Series
 series = do
@@ -165,6 +165,14 @@ series = do
   skipTailingWhitespace
   return $ Series sid runYears
 
+movieId :: Parser TitleId
+movieId = do
+  c <- notChar '"'
+  cs <- manyTill anyChar (lookAhead $ char '(' *> yearId <* char ')')
+  --skipSpace
+  (y, n) <- char '(' *> yearId <* char ')'
+  return $ TitleId (T.pack $ c:cs) y n
+
 movieType :: Parser MovieType
 movieType = string "(V)" *> return Video
   <|> string "(TV)" *> return Television
@@ -173,10 +181,7 @@ movieType = string "(V)" *> return Video
 
 movie :: Parser Movie
 movie = do
-  c <- notChar '"'
-  cs <- manyTill anyChar (lookAhead $ char '(' *> yearId <* char ')')
-  --skipSpace
-  (y, n) <- char '(' *> yearId <* char ')'
+  mId <- movieId
   -- char ')'
   skipSpace
   mType <- movieType
@@ -185,7 +190,7 @@ movie = do
   skipMany (char '\t')
   yearAired <- Just <$> year <|> string "????" *> return Nothing
   skipTailingWhitespace
-  return $ Movie (T.pack $ c:cs) y n susp mType yearAired
+  return $ Movie mId susp mType yearAired
 
 data MoviesList = S Series | E Episode | M Movie | Error T.Text
                 deriving (Show)
