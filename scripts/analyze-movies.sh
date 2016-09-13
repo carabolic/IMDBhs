@@ -6,6 +6,4 @@ CCOUNT_YEARS="cut -f2 | sort | uniq -c | awk -v OFS="\," '{print \$2, \$1, sum+=
 
 movies=$1
 
-echo $CCOUNT_YEARS
-
 eval $CCONVERT $movies | eval $CPARSE | eval $CCOUNT_YEARS
