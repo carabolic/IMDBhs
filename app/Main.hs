@@ -9,21 +9,15 @@ import System.IO (stderr, stdout, hPutStrLn)
 import qualified Codec.Compression.GZip as GZip
 import Data.Attoparsec.Text
 import qualified Data.ByteString.Lazy as B
-import qualified Data.Text.IO as IO (readFile, hPutStrLn)
+import qualified Data.Text.IO as IO (getContents, readFile, hPutStrLn)
 import qualified Data.Text as T (Text, all, intercalate, lines, pack)
 
 import Movies (MoviesList (..), Movie (..), Series (..), Episode (..), TitleId (..), moviesListLine, movieParser)
 
 main :: IO ()
 main = do
-  args <- getArgs
-  let moviesPath = args !! 0
-  exists <- doesFileExist moviesPath
-  if exists
-    then do
-      ms <- parseMovies' moviesPath
-      mapM_ handleMovies (zip [1..] ms)
-    else hPutStrLn stderr $ moviesPath ++ " does not exist!"
+  ms <- parseMovies' ""
+  mapM_ handleMovies (zip [1..] ms)
 
 parseCompressed :: FilePath -> IO B.ByteString
 parseCompressed path = do
@@ -50,7 +44,8 @@ parseMovies moviesPath = do
 
 parseMovies' :: FilePath -> IO [MoviesList]
 parseMovies' moviesPath = do
-  contents <- IO.readFile moviesPath
+  --contents <- IO.readFile moviesPath
+  contents <- IO.getContents
   --let moviesList = dropWhile (T.all (== '#')) $ T.lines contents
   return $ rights $ map (parseOnly moviesListLine) (T.lines contents)
   --return $ rights $ map (parseOnly moviesListLine) (T.lines contents)
@@ -70,6 +65,8 @@ titleIdToString (Movies.TitleId t (Just y) (Just n)) =
   T.intercalate "\t" [t, T.pack $ show y, T.pack $ show n]
 titleIdToString (Movies.TitleId t (Just y) Nothing) =
   T.intercalate "\t" [t, T.pack $ show y, "\"\""]
+titleIdToString (Movies.TitleId t Nothing (Just n)) =
+  T.intercalate "\t" [t, "\"\"", T.pack $ show n]
 titleIdToString (Movies.TitleId t Nothing Nothing) =
   T.intercalate "\t" [t, "\"\"", "\"\""]
 
