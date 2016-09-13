@@ -10,9 +10,9 @@ import qualified Codec.Compression.GZip as GZip
 import Data.Attoparsec.Text
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Text.IO as IO (readFile, hPutStrLn)
-import qualified Data.Text as T (Text, all, lines, pack)
+import qualified Data.Text as T (Text, all, intercalate, lines, pack)
 
-import Movies (MoviesList (..), moviesListLine, movieParser)
+import Movies (MoviesList (..), Movie (..), Series (..), Episode (..), TitleId (..), moviesListLine, movieParser)
 
 main :: IO ()
 main = do
@@ -57,5 +57,19 @@ parseMovies' moviesPath = do
 
 handleMovies :: (Int, MoviesList) -> IO ()
 handleMovies (_, Error t) = IO.hPutStrLn stderr t
-handleMovies m = hPutStrLn stdout $ show m
+handleMovies (i, m) = IO.hPutStrLn stdout $ movieToString m
+
+movieToString :: MoviesList -> T.Text
+movieToString (M (Movies.Movie tid _ _ _)) = titleIdToString tid
+movieToString (S (Movies.Series tid _)) = titleIdToString tid
+movieToString (E (Movies.Episode tid _ _)) = titleIdToString tid
+movieToString _ = ""
+
+titleIdToString :: Movies.TitleId -> T.Text
+titleIdToString (Movies.TitleId t (Just y) (Just n)) =
+  T.intercalate "\t" [t, T.pack $ show y, T.pack $ show n]
+titleIdToString (Movies.TitleId t (Just y) Nothing) =
+  T.intercalate "\t" [t, T.pack $ show y, "\"\""]
+titleIdToString (Movies.TitleId t Nothing Nothing) =
+  T.intercalate "\t" [t, "\"\"", "\"\""]
 
