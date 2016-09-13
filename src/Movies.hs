@@ -21,18 +21,18 @@ data Suspended = Suspended
                deriving (Show)
 data MovieType = Cinema | Video | Television | VideoGame
                deriving (Show)
-data Movie = Movie String (Maybe Year) (Maybe Int) (Maybe Suspended) MovieType (Maybe Year)
+data Movie = Movie T.Text (Maybe Year) (Maybe Int) (Maybe Suspended) MovieType (Maybe Year)
            deriving (Show)
 
 data RunningYears = Finished Year Year | Running Year | Announced
                   deriving (Show, Eq)
 
-data EpisodeTitle = WithTitle String (Maybe (Int, Int))
+data EpisodeTitle = WithTitle T.Text (Maybe (Int, Int))
                   | WithoutTitle (Maybe (Int, Int))
                   | WithoutTitleAndNumbers Year Month Day
                   deriving (Show, Eq)
 
-data SeriesId = SeriesId String (Maybe Year) (Maybe Int)
+data SeriesId = SeriesId T.Text (Maybe Year) (Maybe Int)
               deriving (Show, Eq)
 
 -- {title, season, episode, year_aired}
@@ -106,7 +106,7 @@ withTitle = do
   t <- manyTill anyChar (lookAhead ((skipSpace >> seasonEpisode >> return ()) <|> (char '}' >> return ())))
   skipSpace
   ep <- option Nothing (Just <$> seasonEpisode)
-  return $ WithTitle t ep
+  return $ WithTitle (T.pack t) ep
 
 withoutTitle :: Parser EpisodeTitle
 withoutTitle = do
@@ -153,7 +153,7 @@ seriesId = do
   t <- manyTill anyChar (string "\" (")
   (y, n) <- yearId
   char ')'
-  return $ SeriesId t y n
+  return $ SeriesId (T.pack t) y n
 
 series :: Parser Series
 series = do
@@ -185,7 +185,7 @@ movie = do
   skipMany (char '\t')
   yearAired <- Just <$> year <|> string "????" *> return Nothing
   skipTailingWhitespace
-  return $ Movie (c:cs) y n susp mType yearAired
+  return $ Movie (T.pack $ c:cs) y n susp mType yearAired
 
 data MoviesList = S Series | E Episode | M Movie | Error T.Text
                 deriving (Show)
